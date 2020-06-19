@@ -20,8 +20,8 @@ void per_corner_normals(
   std::vector<int> faces;
   // The absolute deviation between normal1 and normal2 in degree
   double angle;
-  // The absolute value of threshold
-  const double threshold = abs(corner_threshold);
+  // The absolute value of cos threshold in radians
+  const double threshold = abs(cos(corner_threshold * M_PI / 180.0));
   
   for (int i = 0; i < F_rows; i++) {
     normal1 = triangle_area_normal(V.row(F(i, 0)), V.row(F(i, 1)), V.row(F(i, 2)));
@@ -34,7 +34,8 @@ void per_corner_normals(
       for (int face_index : faces) {
 
         normal2 = triangle_area_normal(V.row(F(face_index, 0)), V.row(F(face_index, 1)), V.row(F(face_index, 2)));
-        angle = abs(acos(normal1.dot(normal2) / normal1.norm() / normal2.norm()));
+        
+        angle = abs(normal1.dot(normal2) / normal1.norm() / normal2.norm());
 
         if (angle > threshold) {
           normal += normal2;
