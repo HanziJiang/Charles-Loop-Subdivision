@@ -7,7 +7,15 @@ void per_face_normals(
   Eigen::MatrixXd & N)
 {
   ////////////////////////////////////////////////////////////////////////////
-  // Replace with your code:
-  N = Eigen::MatrixXd::Zero(F.rows(),3);
+  const int rows = F.rows();
+  N = Eigen::MatrixXd::Zero(rows,3);
+
+  Eigen::RowVector3d a, b, c, normal;
+  for (int i = 0; i < rows; i++) {
+    a = V.row(F(i, 0));
+    b = V.row(F(i, 1));
+    c = V.row(F(i, 1));
+    N.row(i) = triangle_area_normal(a, b, c);
+  }
   ////////////////////////////////////////////////////////////////////////////
 }
