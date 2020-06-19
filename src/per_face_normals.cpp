@@ -10,7 +10,7 @@ void per_face_normals(
   const int rows = F.rows();
   N = Eigen::MatrixXd::Zero(rows,3);
 
-  Eigen::RowVector3d a, b, c, normal;
+  Eigen::RowVector3d a, b, c;
   for (int i = 0; i < rows; i++) {
     a = V.row(F(i, 0));
     b = V.row(F(i, 1));
