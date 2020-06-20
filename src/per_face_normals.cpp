@@ -14,7 +14,7 @@ void per_face_normals(
   for (int i = 0; i < rows; i++) {
     a = V.row(F(i, 0));
     b = V.row(F(i, 1));
-    c = V.row(F(i, 1));
+    c = V.row(F(i, 2));
     N.row(i) = triangle_area_normal(a, b, c);
   }
   ////////////////////////////////////////////////////////////////////////////
