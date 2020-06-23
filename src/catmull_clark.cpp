@@ -6,6 +6,16 @@
 #include <vector>
 #include <iostream>
 
+struct hash_pair { 
+    template <class T1, class T2> 
+    size_t operator()(const std::pair<T1, T2>& p) const
+    { 
+        auto hash1 = std::hash<T1>{}(p.first); 
+        auto hash2 = std::hash<T2>{}(p.second); 
+        return hash1 ^ hash2; 
+    } 
+}; 
+
 void catmull_clark(
   const Eigen::MatrixXd & V,
   const Eigen::MatrixXi & F,
@@ -15,7 +25,8 @@ void catmull_clark(
 {
   ////////////////////////////////////////////////////////////////////////////
   // Reference: https://en.wikipedia.org/wiki/Catmull–Clark_subdivision_surface
-  std::cout << "begin\n";
+  // https://www.geeksforgeeks.org/how-to-create-an-unordered_map-of-pairs-in-c/
+  
   if (num_iters <= 0) return;
 
   const int V_rows = V.rows();
@@ -24,86 +35,110 @@ void catmull_clark(
   int SV_size = V_rows + F_rows;
   int SF_size = F_rows * 4;
 
-  Eigen::Matrix3d face_points = Eigen::MatrixXd::Zero(F_rows, 3);
+  Eigen::MatrixXd face_points = Eigen::MatrixXd::Zero(F_rows, 3);
+
   for (int i = 0; i < F_rows; i++) {
     // For each face, add face point
     face_points.row(i) = (V.row(F(i, 0)) + V.row(F(i, 1)) + V.row(F(i, 2)) + V.row(F(i, 3))) / 4.0;
   }
 
-  // For each face point, add edges from face point to adjacent edge point.
   std::unordered_map<int, std::vector<int>> new_edges;  // vertex index & indices of points sharing edge with vertex
-  int vertex_index;
+  std::unordered_map<std::pair<int, int>, std::vector<int>, hash_pair> edge_to_faces;
+  int current_vertex_index, another_vertex_index;
   // vertex index & edge points of the edges vertex-edges[vertex index]
   std::unordered_map<int, std::vector<Eigen::RowVector3d>> edge_points;
-  int target_index_1, target_index_2;
+  std::pair<int, int> pair, reversed_pair;
 
   for (int i = 0; i < F_rows; i++) {
     for (int j = 0; j < 4; j++) {
-      vertex_index = F(i, j);
+      current_vertex_index = F(i, j);
+      another_vertex_index = F(i, (j + 1) % 4);
+      pair = std::make_pair(current_vertex_index, another_vertex_index);
+      reversed_pair = std::make_pair(another_vertex_index, current_vertex_index);
+      
+      // if the edge has not been stored
+      if (edge_to_faces.find(pair) == edge_to_faces.end() && edge_to_faces.find(reversed_pair) == edge_to_faces.end()) {
+        std::vector<int> entry;
+        edge_to_faces[pair] = entry;
+        edge_to_faces[pair].push_back(i);
+      } else if (edge_to_faces.find(pair) != edge_to_faces.end()) {
+        edge_to_faces[pair].push_back(i);
+      } else {
+        edge_to_faces[reversed_pair].push_back(i);
+      }
+    }
+  }
 
+  int num_vertex;
+  Eigen::RowVector3d edge_point_value(0, 0, 0);
+  for (int i = 0; i < F_rows; i++) {
+    for (int j = 0; j < 4; j++) {
+      current_vertex_index = F(i, j);
+      another_vertex_index = F(i, (j + 1) % 4);
+      pair = std::make_pair(current_vertex_index, another_vertex_index);
+      reversed_pair = std::make_pair(another_vertex_index, current_vertex_index);
+    
       // if key not exist
-      if (new_edges.find(vertex_index) == new_edges.end()) {
-        std::vector<int> edge_entry;
-        new_edges[vertex_index] = edge_entry;
+      if (new_edges.find(current_vertex_index) == new_edges.end()) {
+        std::vector<int> entry;
+        new_edges[current_vertex_index] = entry;
         std::vector<Eigen::RowVector3d> edge_point_entry;
-        edge_points[vertex_index] = edge_point_entry;
+        edge_points[current_vertex_index] = edge_point_entry;
       }
-
-      target_index_1 = F(i, (j + 1) % 4);
-      target_index_2 = F(i, (j - 1 + 4) % 4);
-
       // if vertex_index-target_index_1 is not already stored
-      if (std::find(new_edges[vertex_index].begin(), new_edges[vertex_index].end(), target_index_1) == new_edges[vertex_index].end() && (new_edges.find(target_index_1) == new_edges.end() || std::find(new_edges[target_index_1].begin(), new_edges[target_index_1].end(), vertex_index) == new_edges[target_index_1].end())) {
-        new_edges[vertex_index].push_back(target_index_1);
-        edge_points[vertex_index].push_back(V.row(target_index_1) + V.row(vertex_index) / 2.0);
+      if (std::find(new_edges[current_vertex_index].begin(), new_edges[current_vertex_index].end(), another_vertex_index) == new_edges[current_vertex_index].end() && (new_edges.find(another_vertex_index) == new_edges.end() || std::find(new_edges[another_vertex_index].begin(), new_edges[another_vertex_index].end(), current_vertex_index) == new_edges[another_vertex_index].end())) {
+        new_edges[current_vertex_index].push_back(another_vertex_index);
+        edge_point_value.setZero();
+        if (edge_to_faces.find(pair) != edge_to_faces.end()) {
+          num_vertex = edge_to_faces[pair].size();
+          for (int m = 0; m < num_vertex; m++) {
+            edge_point_value += face_points.row(edge_to_faces[pair].at(m));
+          }
+        } else {
+          num_vertex = edge_to_faces[reversed_pair].size();
+          for (int m = 0; m < num_vertex; m++) {
+            edge_point_value += face_points.row(edge_to_faces[reversed_pair].at(m));
+          }
+        }
+        num_vertex += 2;
+        edge_points[current_vertex_index].push_back((V.row(another_vertex_index) + V.row(current_vertex_index) + edge_point_value) / (double) num_vertex);
         SV_size ++;
       }
-      
-      // if vertex_index-target_index_2 is not already stored
-      if (std::find(new_edges[vertex_index].begin(), new_edges[vertex_index].end(), target_index_2) == new_edges[vertex_index].end() && (new_edges.find(target_index_2) == new_edges.end() || std::find(new_edges[target_index_2].begin(), new_edges[target_index_2].end(), vertex_index) == new_edges[target_index_2].end())) {
-        new_edges[vertex_index].push_back(target_index_2);
-        edge_points[vertex_index].push_back(V.row(target_index_2) + V.row(vertex_index) / 2.0);
-        SV_size ++;
-      }
-      
     }
   }
 
   SV = Eigen::MatrixXd::Zero(SV_size, 3);
   SF = Eigen::MatrixXi::Zero(SF_size, 4);
-
+  int num_edges;
   std::vector<std::vector<int> > VF;
   std::vector<int> face_indces;
   vertex_triangle_adjacency(F, V_rows, VF);
 
   Eigen::RowVector3d f(0, 0, 0), r(0, 0, 0);
-  int num_edges;
   Eigen::RowVector3d barycenter(0, 0, 0);
   int num_points;
   for (int i = 0; i < V_rows; i++) {
     // calculate f, the average of all face points of faces adjacent to vertex at V.row(i)
     face_indces = VF[i];
-    for (int face_index : face_indces) {
+    f.setZero();
+    for (const int face_index : face_indces) {
       f += face_points.row(face_index);
     }
-    num_points = face_indces.size();
-
+    f /= face_indces.size();
+    
+    num_edges = 0;
     // calculate r, the average of all edge points of edges touching vertex at V.row(i)
-    num_edges = new_edges[i].size();
-    for (int j = 0; j < num_edges; j++) {
-      r += edge_points[i].at(j);
-    }
-    for (int j = 0; j < VF[i].size(); j++) {
-      for (int k = 0; j < 4; k++) {
-        for (int w = 0; w < new_edges[F(j, k)].size(); w++) {
-          if (new_edges[F(j, k)].at(w) == i) {
-            r += edge_points[F(j, k)].at(w);
-            num_edges ++;
-          }
-        }
+    r.setZero();
+    for (auto entry : edge_to_faces ) {
+      if (entry.first.first == i) {
+        r += (V.row(entry.first.second) + V.row(i)) / 2.0;
+        num_edges++;
+      } else if (entry.first.second == i) {
+        r += (V.row(entry.first.first) + V.row(i)) / 2.0;
+        num_edges++;
       }
     }
-    r /= num_edges;
+    if (num_edges != 0) r /= num_edges;
     
     barycenter = (f + 2 * r + (num_edges - 3) * V.row(i)) / num_edges;
 
@@ -132,29 +167,32 @@ void catmull_clark(
       point_index_3 = V_rows + i;
 
       another_index_1 = F(i, (j + 1) % 4);
-      another_index_1 = F(i, (j - 1 + 4) % 4);
-      count_1, count_2 = -1;
-      for (int a = 0; a < new_edges.size() && (count_1 < 0 || count_2 < 0); i++) {
+      another_index_2 = F(i, (j - 1 + 4) % 4);
+      count_1 = -1;
+      count_2 = -1;
+      index = 0;
+      for (int a = 0; a < new_edges.size() && (count_1 < 0 || count_2 < 0); a++) {
         for (int b = 0; b < new_edges[a].size() && (count_1 < 0 || count_2 < 0); b++) {
           if ((a == point_index_1 && new_edges[a].at(b) == another_index_1) || (a == another_index_1 && new_edges[a].at(b) == point_index_1)) {
-            count_1 = a * new_edges[a].size() + b;
+            count_1 = index;
           }
 
-          if ((a == point_index_2 && new_edges[a].at(b) == another_index_2) || (a == another_index_2 && new_edges[a].at(b) == point_index_2)) {
-            count_2 = a * new_edges[a].size() + b;
+          if ((a == point_index_1 && new_edges[a].at(b) == another_index_2) || (a == another_index_2 && new_edges[a].at(b) == point_index_1)) {
+            count_2 = index;
           }
+
+          index++;
         }
       }
 
       point_index_2 = F_rows + V_rows + count_1;
       point_index_4 = F_rows + V_rows + count_2;
       
-      SF.row(i) = Eigen::RowVector4i(point_index_1, point_index_2, point_index_3, point_index_4);
+      SF.row(i * 4 + j) = Eigen::RowVector4i(point_index_1, point_index_2, point_index_3, point_index_4);
     }
   }
 
   catmull_clark(Eigen::MatrixXd(SV), Eigen::MatrixXi(SF), num_iters - 1, SV, SF);
-  std::cout << "SV size:" << SV.size() << "\n";
-  std::cout << "SF size:" << SF.size() << "\n";
+
   ////////////////////////////////////////////////////////////////////////////
 }
