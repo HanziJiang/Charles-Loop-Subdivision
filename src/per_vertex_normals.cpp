@@ -17,7 +17,7 @@ void per_vertex_normals(
     for (int j = 0; j < F_rows; j++) {
       // if the triangle at F.row(j) has V.row(i) as one of its vertices, add the area-weighted normal of the triangle to n
       if (F(j, 0) == i || F(j, 1) == i || F(j, 2) == i) {
-        normal += triangle_area_normal(V.row(F(j, 0)), V.row(F(j, 1)), V.row(F(j, 2))).normalized();
+        normal += triangle_area_normal(V.row(F(j, 0)), V.row(F(j, 1)), V.row(F(j, 2)));
       }
     }
     N.row(i) = normal.normalized();
