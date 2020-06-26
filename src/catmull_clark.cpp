@@ -150,17 +150,21 @@ void catmull_clark(
   }
 
   int size;
+  std::unordered_map<std::pair<int, int>, int, hash_pair> edge_to_SV_row;
   int index = V_rows + F_rows;
   for (int i = 0; i < V_rows; i++) {
     size = edge_points[i].size();
     for (int j = 0; j < size; j++) {
       SV.row(index) = edge_points[i].at(j);
+      std::pair<int, int> pair = std::make_pair(i, new_edges[i].at(j));
+      edge_to_SV_row[pair] = index;
+      std::cout << "(" << pair.first << "," << pair.second << ")" << index << "\n";
       index++;
     }
   }
 
   int point_index_1, point_index_2, point_index_3, point_index_4, another_index_1, another_index_2; 
-  int count_1, count_2;
+  std::pair<int, int> pair_1, pair_1_reversed, pair_2, pair_2_reversed;
   for (int i = 0; i < F_rows; i++) {
     for (int j = 0; j < 4; j++) {
       point_index_1 = F(i, j);
@@ -168,31 +172,36 @@ void catmull_clark(
 
       another_index_1 = F(i, (j + 1) % 4);
       another_index_2 = F(i, (j - 1 + 4) % 4);
-      count_1 = -1;
-      count_2 = -1;
-      index = 0;
-      for (int a = 0; a < new_edges.size() && (count_1 < 0 || count_2 < 0); a++) {
-        for (int b = 0; b < new_edges[a].size() && (count_1 < 0 || count_2 < 0); b++) {
-          if ((a == point_index_1 && new_edges[a].at(b) == another_index_1) || (a == another_index_1 && new_edges[a].at(b) == point_index_1)) {
-            count_1 = index;
-          }
 
-          if ((a == point_index_1 && new_edges[a].at(b) == another_index_2) || (a == another_index_2 && new_edges[a].at(b) == point_index_1)) {
-            count_2 = index;
-          }
-
-          index++;
-        }
+      pair_1 = std::make_pair(point_index_1, another_index_1);
+      pair_1_reversed = std::make_pair(another_index_1, point_index_1);
+      pair_2 = std::make_pair(point_index_1, another_index_2);
+      pair_2_reversed = std::make_pair(another_index_2, point_index_1);
+      if (edge_to_SV_row.find(pair_1) != edge_to_SV_row.end()) {
+        point_index_2 = edge_to_SV_row[pair_1];
+      } else if (edge_to_SV_row.find(pair_1_reversed) != edge_to_SV_row.end()) {
+        point_index_2 = edge_to_SV_row[pair_1_reversed];
+      } else {
+        //something went wrong
       }
 
-      point_index_2 = F_rows + V_rows + count_1;
-      point_index_4 = F_rows + V_rows + count_2;
-      
+      if (edge_to_SV_row.find(pair_2) != edge_to_SV_row.end()) {
+        point_index_4 = edge_to_SV_row[pair_2];
+      } else if (edge_to_SV_row.find(pair_2_reversed) != edge_to_SV_row.end()) {
+        point_index_4 = edge_to_SV_row[pair_2_reversed];
+      } else {
+        //something went wrong
+      }
+
       SF.row(i * 4 + j) = Eigen::RowVector4i(point_index_1, point_index_2, point_index_3, point_index_4);
     }
   }
 
   catmull_clark(Eigen::MatrixXd(SV), Eigen::MatrixXi(SF), num_iters - 1, SV, SF);
+
+  std::cout << SV << "\n";
+  std::cout << SF << "\n";
+
 
   ////////////////////////////////////////////////////////////////////////////
 }
