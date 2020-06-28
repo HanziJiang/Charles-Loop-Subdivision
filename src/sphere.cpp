@@ -33,10 +33,10 @@ void sphere(
       index = (num_faces_v + 1) * i + j;
 
       latitude = M_PI * (double) i / num_faces_u;
-      longitude = 2 * M_PI * (double) j /  num_faces_v;
-      x = sin(latitude) * cos(longitude);
-      y = sin(latitude) * sin(longitude);
-      z = cos(latitude);
+      longitude = 2 * M_PI * (double) j / num_faces_v;
+      z = - sin(latitude) * cos(longitude);
+      x = - sin(latitude) * sin(longitude);
+      y = - cos(latitude);
 
       // update V, UV, NV
       V.row(index) = Eigen::RowVector3d(x, y, z);
