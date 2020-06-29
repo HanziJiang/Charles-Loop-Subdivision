@@ -32,15 +32,15 @@ void sphere(
     for (int j = 0; j <= num_faces_v; j++) {
       index = (num_faces_v + 1) * i + j;
 
-      latitude = M_PI * (double) i / num_faces_u;
-      longitude = 2 * M_PI * (double) j / num_faces_v;
+      latitude = M_PI * (double) j / num_faces_v;
+      longitude = 2 * M_PI * (double) i / num_faces_u;
       z = - sin(latitude) * cos(longitude);
       x = - sin(latitude) * sin(longitude);
       y = - cos(latitude);
 
       // update V, UV, NV
       V.row(index) = Eigen::RowVector3d(x, y, z);
-      UV.row(index) = Eigen::RowVector2d((double) j / (num_faces_v + 1), (double) i / (num_faces_u + 1));
+      UV.row(index) = Eigen::RowVector2d((double) i / (num_faces_u + 1), (double) j / (num_faces_v + 1));
       NV.row(index) = Eigen::RowVector3d(x, y, z).normalized();
       
       // update F, UF, NF
