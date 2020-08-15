@@ -21,12 +21,6 @@ endif()
 add_library(core ${SRCFILES})
 target_link_libraries(core igl::core igl::opengl igl::opengl_glfw )
 
-add_executable(normals "normals.cpp")
-target_link_libraries(normals core igl::core igl::opengl igl::opengl_glfw )
+add_executable(subdivision "subdivision.cpp")
+target_link_libraries(subdivision core igl::core igl::opengl igl::opengl_glfw )
 
-add_executable(quad_subdivision "quad_subdivision.cpp")
-target_link_libraries(quad_subdivision core igl::core igl::opengl igl::opengl_glfw )
-
-
-add_executable(obj "obj.cpp")
-target_link_libraries(obj core igl::png igl::core igl::opengl igl::opengl_glfw )

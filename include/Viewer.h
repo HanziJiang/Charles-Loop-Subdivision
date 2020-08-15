@@ -1,23 +1,24 @@
-#ifndef QUADVIEWER_H
-#define QUADVIEWER_H
+#ifndef VIEWER_H
+#define VIEWER_H
 #include <igl/opengl/glfw/Viewer.h>
 #include <Eigen/Core>
 #include <cassert>
+#include <iostream>
 #include <string>
-class QuadViewer
+class Viewer
 {
   public:
     igl::opengl::glfw::Viewer viewer;
     std::function<bool(igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifiers)> callback_key_pressed;
     bool show_lines;
   public:
-    QuadViewer():show_lines(true),
+    Viewer():show_lines(true),
       // Important to initialize function
       callback_key_pressed([](igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifiers)->bool{return false;})
     {
-      std::cout<<R"(QuadViewer usage:
+      std::cout<<R"(Viewer usage:
   F,f      [disabled]
-  L,l      Show/hide quad eges
+  L,l      Show/hide eges
   U,u      Show/hide texture
 
 )";
@@ -35,7 +36,7 @@ class QuadViewer
               return false;
             case 'F':
             case 'f':
-              // Disable Toggling "face based" since we want control of quad-mesh
+              // Disable Toggling "face based" since we want control of mesh
               // appearance
               break;
             case 'L':
@@ -53,11 +54,11 @@ class QuadViewer
         return true;
       };
     }
-    // Set the mesh of .data() to be an exploded version of the given quad mesh
+    // Set the mesh of .data() to be an exploded version of the given mesh
     // 
     // Inputs:
     //   V  #V by 3 mesh vertex positions
-    //   F  #F by 4 quad indices into V
+    //   F  #F by 3 tri indices into V
     void set_mesh(
       const Eigen::MatrixXd & V,
       const Eigen::MatrixXd & UV,
@@ -66,39 +67,37 @@ class QuadViewer
     {
       assert((UV.rows() == 0 || V.rows() == UV.rows()) && "V and UV should have same #rows");
       assert((NV.rows() == 0 || V.rows() == NV.rows()) && "V and NV should have same #rows");
-      // libigl Viewer does not handle quad meshes well by default
-      // Explode the quad mesh into quad soup. Then each quad can have smooth
-      // normals: faceted-quad appearance
-      Eigen::MatrixXd FV(F.rows()*4,V.cols());
+      // libigl Viewer does not handle meshes well by default
+      // Explode the mesh into soup. Then each can have smooth
+      // normals: faceted-trig appearance
+      Eigen::MatrixXd FV(F.rows()*3,V.cols());
       Eigen::MatrixXd FUV,FNV;
-      if(UV.rows() != 0) FUV.resize(F.rows()*4,UV.cols());
-      if(NV.rows() != 0) FNV.resize(F.rows()*4,NV.cols());
-      Eigen::MatrixXi FF(F.rows(),4);
+      if(UV.rows() != 0) FUV.resize(F.rows()*3,UV.cols());
+      if(NV.rows() != 0) FNV.resize(F.rows()*3,NV.cols());
+      Eigen::MatrixXi FF(F.rows(),3);
       for(int f = 0;f<F.rows();f++)
       {
-        for(int c = 0;c<4;c++)
+        for(int c = 0;c<3;c++)
         {
-          FF(f,c) = c+f*4;
+          FF(f,c) = c+f*3;
           FV.row(FF(f,c)) = V.row(F(f,c));
           if(UV.rows() != 0) FUV.row(FF(f,c)) = UV.row(F(f,c));
           if(NV.rows() != 0) FNV.row(FF(f,c)) = NV.row(F(f,c));
         }
       }
-      Eigen::MatrixXi T(FF.rows()*2,3);
+      Eigen::MatrixXi T(FF.rows()*1,3);
       T<<
-        FF.col(0), FF.col(1), FF.col(2),
-        FF.col(0), FF.col(2), FF.col(3);
+        FF.col(0), FF.col(1), FF.col(2);
       viewer.data().clear();
       viewer.data().set_mesh(FV,T);
       if(NV.rows() != 0) viewer.data().set_normals(FNV);
       if(UV.rows() != 0) viewer.data().set_uv(FUV);
       viewer.data().set_face_based(false);
-      Eigen::MatrixXi E(FF.rows()*4,2);
+      Eigen::MatrixXi E(FF.rows()*3,2);
       E<<
         FF.col(0), FF.col(1),
         FF.col(1), FF.col(2),
-        FF.col(2), FF.col(3),
-        FF.col(3), FF.col(0);
+        FF.col(2), FF.col(0);
       viewer.data().set_edges(FV,E,Eigen::RowVector3d(0,0,0));
     }
     // Wrapper without UV and NV

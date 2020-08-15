@@ -1,5 +1,5 @@
-#include "catmull_clark.h"
-#include "QuadViewer.h"
+#include "loop_subdivision.h"
+#include "Viewer.h"
 #include <igl/readOBJ.h>
 //#include <igl/opengl/glfw/Viewer.h>
 
@@ -8,9 +8,9 @@ int main(int argc, char * argv[])
   Eigen::MatrixXd V;
   Eigen::MatrixXi F;
   igl::readOBJ(argc>1?argv[1]:"../data/bob.obj",V,F);
-  if(F.cols() != 4 || F.minCoeff()<0)
+  if(F.cols() != 3 || F.minCoeff()<0)
   {
-    std::cerr<<"Error: only pure quad meshes supported."<<std::endl;
+    std::cerr<<"Error: only pure trig meshes supported."<<std::endl;
     return EXIT_FAILURE;
   }
   // Remember original mesh
@@ -18,10 +18,10 @@ int main(int argc, char * argv[])
   Eigen::MatrixXi OF = F;
   bool show_lines = true;
 
-  QuadViewer v;
+  Viewer v;
   std::cout<<R"(Usage:
-[space]  apply Catmull-Clark subdivision
-3        apply Catmull-Clark subdivision 3 times
+[space]  apply Charles-Loop subdivision
+3        apply Charles-Loop subdivision 3 times
 R,r      Reset to original mesh
 
 )";
@@ -45,12 +45,12 @@ R,r      Reset to original mesh
         break;
       case '3':
         // carry out three subdivisions
-        catmull_clark(Eigen::MatrixXd(V),Eigen::MatrixXi(F),3,V,F);
+        loop_subdivision(Eigen::MatrixXd(V),Eigen::MatrixXi(F),3,V,F);
         v.set_mesh(V,F);
         break;
       case ' ':
         // carry out one subdivision
-        catmull_clark(Eigen::MatrixXd(V),Eigen::MatrixXi(F),1,V,F);
+        loop_subdivision(Eigen::MatrixXd(V),Eigen::MatrixXi(F),1,V,F);
         v.set_mesh(V,F);
         break;
     }
