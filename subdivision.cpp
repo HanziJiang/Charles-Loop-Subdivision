@@ -7,7 +7,7 @@ int main(int argc, char * argv[])
 {
   Eigen::MatrixXd V;
   Eigen::MatrixXi F;
-  igl::readOBJ(argc>1?argv[1]:"../data/bob.obj",V,F);
+  igl::readOBJ(argc>1?argv[1]:"../data/diamond.obj",V,F);
   if(F.cols() != 3 || F.minCoeff()<0)
   {
     std::cerr<<"Error: only pure trig meshes supported."<<std::endl;
