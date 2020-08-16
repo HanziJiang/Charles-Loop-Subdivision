@@ -56,7 +56,6 @@ void loop_subdivision(
     a = entry.first.first;
     b = entry.first.second;
 
-    // if vertex
     if (vertex_to_vertices.find(a) == vertex_to_vertices.end()) {
       std::vector<int> entry_vec;
       vertex_to_vertices[a] = entry_vec;
@@ -113,7 +112,7 @@ void loop_subdivision(
       }
       for (int j = 0; j < 3; j++) {
         if (F(faces[1], j) != pair.first && F(faces[1], j) != pair.second) {
-          D = V.row(F(faces[0], j));
+          D = V.row(F(faces[1], j));
           break;
         }
       }
