@@ -1,4 +1,4 @@
-# loop_subdivision
+# Charles-Loop Subdivision
 An implementation of the Charles-Loop subdivision scheme.
 
 ## Running the Project
